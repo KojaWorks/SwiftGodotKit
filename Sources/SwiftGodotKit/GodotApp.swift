@@ -85,6 +85,15 @@ public class GodotApp: ObservableObject {
     
     /// The Godot instance for this host, if it was successfully created
     @ObservationIgnored public var instance: GodotInstance?
+    /// True while `GodotInstance.create` is in flight. It pumps the main run loop, so AppKit
+    /// can re-enter `start()` (a second `viewDidMoveToWindow` while one window is still being
+    /// built); a second create boots a second engine into the process and crashes in
+    /// `Main::setup2`. Re-entrant callers back off, and their views queue via `queueStart`.
+    @ObservationIgnored public private(set) var isCreatingInstance = false
+    /// True while `instance.start()` is in flight; it also pumps the run loop, and a
+    /// re-entrant call runs `Main::setup2` twice on one engine. Views check this and queue
+    /// instead; the outer call drains them via `startPending`.
+    @ObservationIgnored internal var isStartingEngine = false
     @ObservationIgnored public private(set) var isPaused = false
     @ObservationIgnored public private(set) var isDrawing = true
     @ObservationIgnored private var hostBridge: SwiftGodotHostBridge?
@@ -161,10 +170,13 @@ public class GodotApp: ObservableObject {
     public func startPending() {
         guard instance != nil else { return }
 
-        for view in pendingStart {
+        // Take the set first: startGodotInstance can re-queue a view mid-drain (engine still
+        // starting), and a removeAll afterwards would silently drop it.
+        let starting = pendingStart
+        pendingStart.removeAll()
+        for view in starting {
             view.startGodotInstance()
         }
-        pendingStart.removeAll()
 
         for view in pendingLayout {
 #if os(macOS)
@@ -186,6 +198,9 @@ public class GodotApp: ObservableObject {
             }
             return true
         }
+        if isCreatingInstance { return false }
+        isCreatingInstance = true
+        defer { isCreatingInstance = false }
 
         #if os(iOS)
         touches = [UITouch?](repeating: nil, count: maxTouchCount)
