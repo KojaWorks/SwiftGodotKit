@@ -2,8 +2,8 @@
 import PackageDescription
 let macLibgodotTarget: Target = .binaryTarget(
     name: "mac_libgodot",
-    url: "https://github.com/migueldeicaza/godot/releases/download/v4.6.4/libgodot-macos.xcframework.zip",
-    checksum: "2d8c2aaa336fe7c0f621f390c88ce9efb735f6b3c715657c1f665d26134db3a4"
+    url: "https://github.com/KojaWorks/godot/releases/download/v4.6.4-koja.1/libgodot-macos.xcframework.zip",
+    checksum: "5bb06459b129be22d36ed891944c5228f18df63ce3a5abf3ae3747ad73d52b7f"
 )
 
 let iosLibgodotTarget: Target = .binaryTarget(
